@@ -4,6 +4,7 @@ namespace GodotRollbackNetcode
 {
     public class SyncReplay : GDScriptWrapper
     {
+        #region Singleton
         private static SyncReplay instance;
         public static SyncReplay Instance
         {
@@ -16,13 +17,17 @@ namespace GodotRollbackNetcode
         }
         public static void Init(Node node)
         {
-            instance = new SyncReplay(node.GetNode("/root/SyncReplay"));
+            var autoloadedNode = node.GetNodeOrNull("/root/SyncReplay");
+            if (autoloadedNode != null)
+                instance = new SyncReplay(autoloadedNode);
         }
+        #endregion
 
         public SyncReplay() { }
 
         public SyncReplay(Godot.Object source) : base(source) { }
 
+        #region Properties
         public bool Active
         {
             get => (bool)Source.Get("active");
@@ -46,5 +51,6 @@ namespace GodotRollbackNetcode
             get => (string)Source.Get("match_scene_method");
             set => Source.Set("match_scene_method", value);
         }
+        #endregion
     }
 }

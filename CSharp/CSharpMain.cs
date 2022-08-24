@@ -35,8 +35,6 @@ namespace Game
             GetTree().Connect("network_peer_disconnected", this, nameof(OnNetworkPeerDisconnected));
             GetTree().Connect("server_disconnected", this, nameof(OnServerDisconnected));
 
-            SyncReplay.Init(this);
-            SyncManager.Init(this);
             SyncManager.Instance.SyncStarted += OnSyncManagerSyncStarted;
             SyncManager.Instance.SyncStopped += OnSyncManagerSyncStopped;
             SyncManager.Instance.SyncLost += OnSyncManagerSyncLost;
@@ -44,6 +42,18 @@ namespace Game
             SyncManager.Instance.SyncError += OnSyncManagerSyncError;
 
             syncLostLabel.Visible = false;
+        }
+
+        public override void _Notification(int what)
+        {
+            if (what == NotificationPredelete)
+            {
+                SyncManager.Instance.SyncStarted -= OnSyncManagerSyncStarted;
+                SyncManager.Instance.SyncStopped -= OnSyncManagerSyncStopped;
+                SyncManager.Instance.SyncLost -= OnSyncManagerSyncLost;
+                SyncManager.Instance.SyncRegained -= OnSyncManagerSyncRegained;
+                SyncManager.Instance.SyncError -= OnSyncManagerSyncError;
+            }
         }
 
         private void OnServerButtonPressed()

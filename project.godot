@@ -41,6 +41,7 @@ config/icon="res://icon.png"
 SyncManager="*res://addons/godot-rollback-netcode/SyncManager.gd"
 SyncDebugger="*res://addons/godot-rollback-netcode/SyncDebugger.gd"
 SyncReplay="*res://addons/godot-rollback-netcode/SyncReplay.gd"
+SyncCSharpInit="*res://addons/godot-rollback-netcode/mono/SyncCSharpInit.cs"
 
 [debug]
 
@@ -69,9 +70,11 @@ sync_debug={
 [network]
 
 limits/debugger_stdout/max_chars_per_second=2048000
+rollback/spawn_manager/reuse_despawned_nodes=true
 rollback/classes/message_serializer="res://CSharp/CSharpMessageSerializer.cs"
-rollback/debug/message_bytes=100
-rollback/debug/check_message_serializer_roundtrip=true
+rollback/debug/rollback_ticks=4
+rollback/debug/random_rollback_ticks=10
+rollback/debug/message_bytes=1280
 rollback/log_inspector/replay_match_scene_path="res://CSharp/CSharpMain.tscn"
 
 [physics]

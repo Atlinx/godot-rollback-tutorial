@@ -6,6 +6,7 @@ namespace GodotRollbackNetcode
 {
     public class SyncManager : GDScriptWrapper
     {
+        #region Singleton
         private static SyncManager instance;
         public static SyncManager Instance
         {
@@ -18,26 +19,86 @@ namespace GodotRollbackNetcode
         }
         public static void Init(Node node)
         {
-            instance = new SyncManager(node.GetNode("/root/SyncManager"));
+            var autoloadedNode = node.GetNodeOrNull("/root/SyncManager");
+            if (autoloadedNode != null)
+                instance = new SyncManager(autoloadedNode);
         }
+        #endregion
 
         #region Object Variables
-        public Godot.Object NetworkAdapter
+        private NetworkAdaptorWrapper networkAdaptorWrapper;
+        public INetworkAdaptor NetworkAdaptor
         {
-            get => (Godot.Object)Source.Get("network_adaptor");
-            set => Source.Set("network_adaptor", value);
+            get
+            {
+                var source = (Godot.Object)Source.Get("network_adaptor");
+                if (source == null) return null;
+                if (source is INetworkAdaptor networkAdaptor) return networkAdaptor;
+                if (networkAdaptorWrapper == null || networkAdaptorWrapper.Source != source)
+                    networkAdaptorWrapper = new NetworkAdaptorWrapper(source);
+                return networkAdaptorWrapper;
+            }
+            set
+            {
+                if (value is BaseNetworkAdaptor @base)
+                    Source.Set("network_adaptor", @base);
+                else if (value is NetworkAdaptorWrapper wrapper)
+                    Source.Set("network_adaptor", wrapper.Source);
+                else if (value is Godot.Object obj)
+                    Source.Set("network_adaptor", obj);
+                else
+                    GD.PrintErr($"You can only assign {nameof(BaseNetworkAdaptor)}, {nameof(NetworkAdaptorWrapper)}, or {nameof(Godot)}.{nameof(Godot.Object)} to {nameof(SyncManager)}.{nameof(NetworkAdaptor)}");
+            }
         }
 
-        public Godot.Object MessageSerializer
+        private MessageSerializerWrapper messageSerializerWrapper;
+        public IMessageSerializer MessageSerializer
         {
-            get => (Godot.Object)Source.Get("message_serializer");
-            set => Source.Set("message_serializer", value);
+            get
+            {
+                var source = (Godot.Object)Source.Get("message_serializer");
+                if (source == null) return null;
+                if (source is IMessageSerializer messageSerializer) return messageSerializer;
+                if (messageSerializerWrapper == null || messageSerializerWrapper.Source != source)
+                    messageSerializerWrapper = new MessageSerializerWrapper(source);
+                return messageSerializerWrapper;
+            }
+            set
+            {
+                if (value is BaseMessageSerializer @base)
+                    Source.Set("network_adaptor", @base);
+                else if (value is MessageSerializerWrapper wrapper)
+                    Source.Set("network_adaptor", wrapper.Source);
+                else if (value is Godot.Object obj)
+                    Source.Set("network_adaptor", obj);
+                else
+                    GD.PrintErr($"You can only assign {nameof(BaseMessageSerializer)}, {nameof(MessageSerializerWrapper)}, or {nameof(Godot)}.{nameof(Godot.Object)} to {nameof(SyncManager)}.{nameof(MessageSerializer)}");
+            }
         }
 
-        public Godot.Object HashSerializer
+        private HashSerializerWrapper hashSerializerWrapper;
+        public IHashSerializer HashSerializer
         {
-            get => (Godot.Object)Source.Get("hash_serializer");
-            set => Source.Set("hash_serializer", value);
+            get
+            {
+                var source = (Godot.Object)Source.Get("hash_serializer");
+                if (source == null) return null;
+                if (source is IHashSerializer hashSerializer) return hashSerializer;
+                if (hashSerializerWrapper == null || hashSerializerWrapper.Source != source)
+                    hashSerializerWrapper = new HashSerializerWrapper(source);
+                return hashSerializerWrapper;
+            }
+            set
+            {
+                if (value is BaseHashSerializer @base)
+                    Source.Set("network_adaptor", @base);
+                else if (value is HashSerializerWrapper wrapper)
+                    Source.Set("network_adaptor", wrapper.Source);
+                else if (value is Godot.Object obj)
+                    Source.Set("network_adaptor", obj);
+                else
+                    GD.PrintErr($"You can only assign {nameof(BaseHashSerializer)}, {nameof(HashSerializerWrapper)}, or {nameof(Godot)}.{nameof(Godot.Object)} to {nameof(SyncManager)}.{nameof(HashSerializer)}");
+            }
         }
         #endregion
 
@@ -272,62 +333,49 @@ namespace GodotRollbackNetcode
         public event Action SyncStopped;
         public event Action SyncLost;
         public event Action SyncRegained;
-        /// <summary>
-        /// message
-        /// </summary>
-        public event Action<string> SyncError;
-        /// <summary>
-        /// count
-        /// </summary>
-        public event Action<int> SkipTicksFlagged;
-        /// <summary>
-        /// tick
-        /// </summary>
-        public event Action<int> RollbackFlagged;
-        /// <summary>
-        /// tick, peerId, localInput, remoteInput
-        /// </summary>
-        public event Action<int, int, Godot.Collections.Dictionary, Godot.Collections.Dictionary> PredictionMissed;
-        /// <summary>
-        /// tick, peerId, localInput, remoteInput
-        /// </summary>
-        public event Action<int, int, int, int> RemoteStateMismatch;
-        /// <summary>
-        /// peerId
-        /// </summary>
-        public event Action<int> PeerAdded;
-        /// <summary>
-        /// peerId
-        /// </summary>
-        public event Action<int> PeerRemoved;
-        /// <summary>
-        /// peer
-        /// </summary>
-        public event Action<Godot.Object> PeerPingedBack;
-        /// <summary>
-        /// rollbackTicks
-        /// </summary>
-        public event Action<int> StateLoaded;
-        /// <summary>
-        /// isRollback
-        /// </summary>
-        public event Action<bool> TickFinished;
-        /// <summary>
-        /// tick
-        /// </summary>
-        public event Action<int> TickRetired;
-        /// <summary>
-        /// tick
-        /// </summary>
-        public event Action<int> TickInputComplete;
-        /// <summary>
-        /// name, spawnedNode, scene, data
-        /// </summary>
-        public event Action<string, Node, PackedScene, Godot.Collections.Dictionary> SceneSpawned;
-        /// <summary>
-        /// name, node
-        /// </summary>
-        public event Action<string, Node> SceneDespawned;
+
+        public delegate void SyncErrorDelegate(string message);
+        public event SyncErrorDelegate SyncError;
+
+        public delegate void SkipTicksFlaggedDelegate(int count);
+        public event SkipTicksFlaggedDelegate SkipTicksFlagged;
+
+        public delegate void RollbackFlaggedDelegate(int tick);
+        public event RollbackFlaggedDelegate RollbackFlagged;
+
+        public delegate void PredictionMissedDelegate(int tick, int peerId, Godot.Collections.Dictionary localInput, Godot.Collections.Dictionary remoteInput);
+        public event PredictionMissedDelegate PredictionMissed;
+
+        public delegate void RemoteStateMismatchDelegate(int tick, int peerId, int localHash, int remoteHash);
+        public event RemoteStateMismatchDelegate RemoteStateMismatch;
+
+        public delegate void PeerAddedDelegate(int peerId);
+        public event PeerAddedDelegate PeerAdded;
+
+        public delegate void PeerRemovedDelegate(int peerId);
+        public event PeerRemovedDelegate PeerRemoved;
+
+        public delegate void PeerPingedBackDelegate(Godot.Object peer);
+        public event PeerPingedBackDelegate PeerPingedBack;
+
+        public delegate void StatedLoadedDelegate(int rollbackTicks);
+        public event StatedLoadedDelegate StateLoaded;
+
+        public delegate void TickFinishedDelegate(bool isRollback);
+        public event TickFinishedDelegate TickFinished;
+
+        public delegate void TickRetiredDelegate(int tick);
+        public event TickRetiredDelegate TickRetired;
+
+        public delegate void TickInputCompleteDelegate(int tick);
+        public event TickInputCompleteDelegate TickInputComplete;
+
+        public delegate void SceneSpawnedDelegate(string name, Node spawnedNode, PackedScene scene, Godot.Collections.Dictionary data);
+        public event SceneSpawnedDelegate SceneSpawned;
+
+        public delegate void SceneDespawnedDelegate(string name, Node node);
+        public event SceneDespawnedDelegate SceneDespawned;
+
         public event Action InterpolationFrame;
         #endregion
 

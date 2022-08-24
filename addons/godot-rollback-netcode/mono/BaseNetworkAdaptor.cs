@@ -1,9 +1,25 @@
 ﻿using Godot;
-using System.Collections.Generic;
+using GDDictionary = Godot.Collections.Dictionary;
 
 namespace GodotRollbackNetcode
 {
-    public abstract class NetworkAdaptor : Godot.Object
+    public interface INetworkAdaptor
+    {
+        void AttachNetworkAdaptor(SyncManager syncManager);
+        void DetachNetworkAdaptor(SyncManager syncManager);
+        void StopNetworkAdaptor(SyncManager syncManager);
+        void Poll();
+        void SendPing(int peerId, GDDictionary msg);
+        void SendPingBack(int peerId, GDDictionary msg);
+        void SendRemoteStart(int peerId);
+        void SendRemoteStop(int peerId);
+        void SendInputTick(int peerId, byte[] msg);
+        bool IsNetworkHost();
+        bool IsNetworkMasterForNode(Node node);
+        int GetNetworkUniqueId();
+    }
+
+    public abstract class BaseNetworkAdaptor : Godot.Reference, INetworkAdaptor
     {
         private void attach_network_adaptor(Godot.Object sync_manager) => AttachNetworkAdaptor(sync_manager.AsWrapper<SyncManager>());
 
@@ -21,13 +37,13 @@ namespace GodotRollbackNetcode
 
         public virtual void Poll() { }
 
-        private void send_ping(int peer_id, Godot.Collections.Dictionary msg) => SendPing(peer_id, msg);
+        private void send_ping(int peer_id, GDDictionary msg) => SendPing(peer_id, msg);
 
-        public abstract void SendPing(int peerId, Godot.Collections.Dictionary msg);
+        public abstract void SendPing(int peerId, GDDictionary msg);
 
-        private void send_ping_back(int peer_id, Godot.Collections.Dictionary msg) => SendPingBack(peer_id, msg);
+        private void send_ping_back(int peer_id, GDDictionary msg) => SendPingBack(peer_id, msg);
 
-        public abstract void SendPingBack(int peerId, Godot.Collections.Dictionary msg);
+        public abstract void SendPingBack(int peerId, GDDictionary msg);
 
         private void send_remote_start(int peer_id) => SendRemoteStart(peer_id);
 
@@ -47,7 +63,7 @@ namespace GodotRollbackNetcode
 
         private bool is_network_master_for_node(Node node) => IsNetworkMasterForNode(node);
 
-        protected abstract bool IsNetworkMasterForNode(Node node);
+        public abstract bool IsNetworkMasterForNode(Node node);
 
         private int get_network_unique_id() => GetNetworkUniqueId();
 

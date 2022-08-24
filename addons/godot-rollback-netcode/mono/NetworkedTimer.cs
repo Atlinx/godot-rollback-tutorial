@@ -2,17 +2,14 @@
 
 namespace GodotRollbackNetcode
 {
-    public class NetworkedAnimationPlayer : GDScriptWrapper
-    {
-        public bool AutoReset
-        {
-            get => (bool)Source.Get("auto_reset");
-            set => Source.Set("auto_reset", value);
-        }
-    }
-
     public class NetworkedTimer : GDScriptWrapper
     {
+        public NetworkedTimer() : base() { }
+        public NetworkedTimer(Godot.Object source) : base(source)
+        {
+            source.Connect("timeout", this, nameof(OnTimeout));
+        }
+
         public bool Autostart
         {
             get => (bool)Source.Get("autostart");
@@ -37,16 +34,23 @@ namespace GodotRollbackNetcode
             set => Source.Set("hash_state", value);
         }
 
-        public NetworkedTimer(Godot.Object source) : base(source)
-        {
-            source.Connect("timeout", this, nameof(OnTimeout));
-        }
-
         public event Action Timeout;
 
         private void OnTimeout()
         {
             Timeout?.Invoke();
         }
+
+        public void Start(int ticks = -1)
+        {
+            Source.Call("start", ticks);
+        }
+
+        public void Stop()
+        {
+            Source.Call("stop");
+        }
+
+        public bool IsStopped => (bool)Source.Call("is_stopped");
     }
 }

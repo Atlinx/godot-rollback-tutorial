@@ -2,7 +2,7 @@
 
 namespace GodotRollbackNetcode
 {
-    public class GDScriptWrapper : Godot.Object
+    public class GDScriptWrapper : Godot.Reference
     {
         public Godot.Object Source { get; protected set; }
         public GDScriptWrapper() { }

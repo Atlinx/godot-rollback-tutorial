@@ -1,11 +1,19 @@
 ﻿using Godot;
-using Godot.Collections;
+using GDDictionary = Godot.Collections.Dictionary;
 using System;
 using System.Linq;
 
 namespace GodotRollbackNetcode
 {
-    public class MessageSerializer : Godot.Object
+    public interface IMessageSerializer
+    {
+        byte[] SerializeInput(GDDictionary input);
+        GDDictionary UnserializeInput(byte[] serialized);
+        byte[] SerializeMessage(GDDictionary msg);
+        GDDictionary UnserializeMessage(byte[] serialized);
+    }
+
+    public class BaseMessageSerializer : Godot.Reference, IMessageSerializer
     {
         const int DEFAULT_MESSAGE_BUFFER_SIZE = 1280;
         enum InputMessageKey
@@ -16,30 +24,30 @@ namespace GodotRollbackNetcode
             STATE_HASHES = 3,
         }
 
-        private byte[] serialize_input(Godot.Collections.Dictionary input) => SerializeInput(input);
+        private byte[] serialize_input(GDDictionary input) => SerializeInput(input);
 
-        public virtual byte[] SerializeInput(Godot.Collections.Dictionary input)
+        public virtual byte[] SerializeInput(GDDictionary input)
         {
             return GD.Var2Bytes(input);
         }
 
-        private Godot.Collections.Dictionary unserialize_input(byte[] serialized) => UnserializeInput(serialized);
+        private GDDictionary unserialize_input(byte[] serialized) => UnserializeInput(serialized);
 
-        public virtual Dictionary UnserializeInput(byte[] serialized)
+        public virtual GDDictionary UnserializeInput(byte[] serialized)
         {
-            return (Dictionary)GD.Bytes2Var(serialized);
+            return (GDDictionary)GD.Bytes2Var(serialized);
         }
 
-        private byte[] serialize_message(Godot.Collections.Dictionary msg) => SerializeMessage(msg);
+        private byte[] serialize_message(GDDictionary msg) => SerializeMessage(msg);
 
-        public virtual byte[] SerializeMessage(Dictionary msg)
+        public virtual byte[] SerializeMessage(GDDictionary msg)
         {
             var buffer = new StreamPeerBuffer();
             buffer.Resize(DEFAULT_MESSAGE_BUFFER_SIZE);
 
             buffer.Put32((int)msg[(int)InputMessageKey.NEXT_INPUT_TICK_REQUESTED]);
 
-            Dictionary inputTicks = (Dictionary)msg[(int)InputMessageKey.INPUT];
+            GDDictionary inputTicks = (GDDictionary)msg[(int)InputMessageKey.INPUT];
             buffer.PutU8((byte)inputTicks.Count);
             if (inputTicks.Count > 0)
             {
@@ -55,7 +63,7 @@ namespace GodotRollbackNetcode
 
             buffer.Put32((int)msg[(int)InputMessageKey.NEXT_HASH_TICK_REQUESTED]);
 
-            Dictionary stateHashes = (Dictionary)msg[(int)InputMessageKey.STATE_HASHES];
+            GDDictionary stateHashes = (GDDictionary)msg[(int)InputMessageKey.STATE_HASHES];
             buffer.PutU8(Convert.ToByte(stateHashes.Count));
             if (stateHashes.Count > 0)
             {
@@ -73,17 +81,17 @@ namespace GodotRollbackNetcode
             return buffer.DataArray;
         }
 
-        private Dictionary unserialize_message(byte[] serialized) => UnserializeMessage(serialized);
+        private GDDictionary unserialize_message(byte[] serialized) => UnserializeMessage(serialized);
 
-        public virtual Dictionary UnserializeMessage(byte[] serialized)
+        public virtual GDDictionary UnserializeMessage(byte[] serialized)
         {
             var buffer = new StreamPeerBuffer();
             buffer.PutData(serialized);
             buffer.Seek(0);
 
-            var msg = new Dictionary();
-            msg[(int)InputMessageKey.INPUT] = new Dictionary();
-            msg[(int)InputMessageKey.STATE_HASHES] = new Dictionary();
+            var msg = new GDDictionary();
+            msg[(int)InputMessageKey.INPUT] = new GDDictionary();
+            msg[(int)InputMessageKey.STATE_HASHES] = new GDDictionary();
 
             msg[(int)InputMessageKey.NEXT_INPUT_TICK_REQUESTED] = buffer.GetU32();
 
@@ -94,7 +102,7 @@ namespace GodotRollbackNetcode
                 for (int i = 0; i < inputTickCount; i++)
                 {
                     var inputSize = buffer.GetU16();
-                    ((Dictionary)msg[(int)InputMessageKey.INPUT])[inputTick] = buffer.GetData(inputSize)[1];
+                    ((GDDictionary)msg[(int)InputMessageKey.INPUT])[inputTick] = buffer.GetData(inputSize)[1];
                     inputTick += 1;
                 }
             }
@@ -107,7 +115,7 @@ namespace GodotRollbackNetcode
                 var hashTick = buffer.GetU32();
                 for (int i = 0; i < hashTickCount; i++)
                 {
-                    ((Dictionary)msg[(int)InputMessageKey.STATE_HASHES])[hashTick] = buffer.GetU32();
+                    ((GDDictionary)msg[(int)InputMessageKey.STATE_HASHES])[hashTick] = buffer.GetU32();
                     hashTick += 1;
                 }
             }

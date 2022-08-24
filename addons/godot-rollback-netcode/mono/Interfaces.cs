@@ -49,6 +49,6 @@
 
     public interface INetworkDespawn
     {
-        void _NetworkDespawn(Godot.Collections.Dictionary data);
+        void _NetworkDespawn();
     }
 }

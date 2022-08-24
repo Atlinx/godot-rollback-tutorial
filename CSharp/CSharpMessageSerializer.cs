@@ -7,7 +7,7 @@ using GDDictionary = Godot.Collections.Dictionary;
 
 namespace Game
 {
-    public class CSharpMessageSerializer : MessageSerializer
+    public class CSharpMessageSerializer : BaseMessageSerializer
     {
         private Dictionary<string, byte> inputPathMapping;
         private Dictionary<byte, string> inputPathMappingReverse;
@@ -16,7 +16,8 @@ namespace Game
         public enum HeaderFlags
         {
             NONE = 0,
-            HAS_INPUT_VECTOR = 1
+            HAS_INPUT_VECTOR = 1,
+            DROP_BOMB = 2,
         }
 
         public CSharpMessageSerializer()
@@ -51,7 +52,9 @@ namespace Game
                 GDDictionary input = (GDDictionary)allInput[path];
                 if (input.Contains("input_vector"))
                     header |= HeaderFlags.HAS_INPUT_VECTOR;
-                
+                if (input.Contains("drop_bomb"))
+                    header |= HeaderFlags.DROP_BOMB;
+
                 buffer.PutU8((byte)header);
 
                 if (input.Contains("input_vector"))
@@ -61,7 +64,6 @@ namespace Game
                     buffer.PutFloat(inputVector.y);
                 }
             }
-
             buffer.Resize(buffer.GetPosition());
             return buffer.DataArray;
         }
@@ -85,11 +87,11 @@ namespace Game
                 string path = inputPathMappingReverse[buffer.GetU8()];
                 GDDictionary input = new GDDictionary();
                 HeaderFlags header = (HeaderFlags)buffer.GetU8();
-                
+
                 if (header.HasFlag(HeaderFlags.HAS_INPUT_VECTOR))
-                {
                     input["input_vector"] = new Vector2(buffer.GetFloat(), buffer.GetFloat());
-                }
+                if (header.HasFlag(HeaderFlags.DROP_BOMB))
+                    input["drop_bomb"] = true;
 
                 allInput[path] = input;
             }
