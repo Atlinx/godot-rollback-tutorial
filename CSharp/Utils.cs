@@ -6,7 +6,7 @@ namespace Game
 {
     public static class Utils
     {
-        public static T Get<T>(this Dictionary dictionary, string key, T defaultReturn = default)
+        public static T Get<T>(this Dictionary dictionary, object key, T defaultReturn = default)
         {
             if (dictionary.Contains(key))
                 return (T)dictionary[key];

@@ -2,7 +2,7 @@
 
 namespace GodotRollbackNetcode
 {
-    public class SyncCSharpInit : Node
+    public class SyncMonoInit : Node
     {
         public override void _Ready()
         {

@@ -41,7 +41,7 @@ config/icon="res://icon.png"
 SyncManager="*res://addons/godot-rollback-netcode/SyncManager.gd"
 SyncDebugger="*res://addons/godot-rollback-netcode/SyncDebugger.gd"
 SyncReplay="*res://addons/godot-rollback-netcode/SyncReplay.gd"
-SyncCSharpInit="*res://addons/godot-rollback-netcode/mono/SyncCSharpInit.cs"
+SyncMonoInit="*res://addons/godot-rollback-netcode/mono/SyncMonoInit.cs"
 
 [debug]
 
