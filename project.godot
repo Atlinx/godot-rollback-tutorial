@@ -33,7 +33,7 @@ _global_script_class_icons={
 [application]
 
 config/name="godot-rollback-tutorial"
-run/main_scene="res://GDScript/GDScriptMain.tscn"
+run/main_scene="res://CSharp/CSharpMain.tscn"
 config/icon="res://icon.png"
 
 [autoload]

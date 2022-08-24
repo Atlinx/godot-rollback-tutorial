@@ -19,11 +19,6 @@ func _init() -> void:
 
 
 func serialize_input(all_input: Dictionary) -> PoolByteArray:
-#	print(input)
-#	var bytes = var2bytes(input)
-#	print("count: %s" % bytes.size())
-#	return bytes
-	
 	var buffer := StreamPeerBuffer.new()
 	buffer.resize(16)
 	

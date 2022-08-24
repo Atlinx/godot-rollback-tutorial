@@ -1167,8 +1167,6 @@ func _physics_process(_delta: float) -> void:
 		_calculate_data_hash(local_input)
 		input_frame.players[network_adaptor.get_network_unique_id()] = InputForPlayer.new(local_input, false)
 		
-		print(local_input);
-		
 		# Only serialize and send input when we have real remote peers.
 		if peers.size() > 0:
 			var serialized_input: PoolByteArray = message_serializer.serialize_input(local_input)
