@@ -2,10 +2,10 @@
 
 namespace GodotRollbackNetcode
 {
-    public class NetworkedTimer : GDScriptWrapper
+    public class NetworkTimer : GDScriptWrapper
     {
-        public NetworkedTimer() : base() { }
-        public NetworkedTimer(Godot.Object source) : base(source)
+        public NetworkTimer() : base() { }
+        public NetworkTimer(Godot.Object source) : base(source)
         {
             source.Connect("timeout", this, nameof(OnTimeout));
         }

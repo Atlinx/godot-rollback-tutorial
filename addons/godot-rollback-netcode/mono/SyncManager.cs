@@ -1,6 +1,6 @@
 using Godot;
 using System;
-using System.Collections.Generic;
+using GDDictionary = Godot.Collections.Dictionary;
 
 namespace GodotRollbackNetcode
 {
@@ -8,7 +8,7 @@ namespace GodotRollbackNetcode
     {
         #region Singleton
         private static SyncManager instance;
-        public static SyncManager Instance
+        public static SyncManager Global
         {
             get
             {
@@ -103,9 +103,9 @@ namespace GodotRollbackNetcode
         #endregion
 
         #region Collection Variables
-        public Godot.Collections.Dictionary Peers
+        public GDDictionary Peers
         {
-            get => (Godot.Collections.Dictionary)Source.Get("peers");
+            get => (GDDictionary)Source.Get("peers");
             set => Source.Set("peers", value);
         }
 
@@ -135,9 +135,9 @@ namespace GodotRollbackNetcode
             set => Source.Set("mechanized", value);
         }
 
-        public Godot.Collections.Dictionary MechanizedInputReceived
+        public GDDictionary MechanizedInputReceived
         {
-            get => (Godot.Collections.Dictionary)Source.Get("mechanized_input_received");
+            get => (GDDictionary)Source.Get("mechanized_input_received");
             set => Source.Set("mechanized_input_received", value);
         }
 
@@ -275,10 +275,7 @@ namespace GodotRollbackNetcode
 
         public SyncManager() { }
 
-        public SyncManager(Godot.Object source) : base(source)
-        {
-            ForwardSignalsToEvents();
-        }
+        public SyncManager(Godot.Object source) : base(source) { }
 
         #region Methods
         public void ResetNetworkAdaptor() => Source.Call("reset_network_adaptor");
@@ -291,9 +288,9 @@ namespace GodotRollbackNetcode
 
         public void ClearPeers() => Source.Call("clear_peers");
 
-        public void StartLogging(string logFilePath) => StartLogging(logFilePath, new Godot.Collections.Dictionary());
+        public void StartLogging(string logFilePath) => StartLogging(logFilePath, new GDDictionary());
 
-        public void StartLogging(string logFilePath, Godot.Collections.Dictionary matchInfo) => Source.Call("start_logging", logFilePath, matchInfo);
+        public void StartLogging(string logFilePath, GDDictionary matchInfo) => Source.Call("start_logging", logFilePath, matchInfo);
 
         public void StopLogging() => Source.Call("stop_logging");
 
@@ -310,9 +307,9 @@ namespace GodotRollbackNetcode
 
         public void ExecuteMechanizedInterframe() => Source.Call("execute_mechanized_interframe");
 
-        public Godot.Collections.Dictionary SortDictionaryKeys(Godot.Collections.Dictionary dictionary) => (Godot.Collections.Dictionary)Source.Call("sort_dictionary_keys");
+        public GDDictionary SortDictionaryKeys(GDDictionary dictionary) => (GDDictionary)Source.Call("sort_dictionary_keys");
 
-        public Node Spawn(string name, Node parent, PackedScene scene, Godot.Collections.Dictionary data, bool rename = true, string signalName = "") => (Node)Source.Call("spawn", name, parent, scene, data, rename, signalName);
+        public Node Spawn(string name, Node parent, PackedScene scene, GDDictionary data, bool rename = true, string signalName = "") => (Node)Source.Call("spawn", name, parent, scene, data, rename, signalName);
 
         public void Despawn(Node node) => Source.Call("despawn", node);
 
@@ -321,11 +318,21 @@ namespace GodotRollbackNetcode
 
         public void SetDefaultSoundBus(string bus) => Source.Call("set_default_sound_bus", bus);
 
-        public void PlaySound(string identifier, AudioStream sound, Godot.Collections.Dictionary info) => Source.Call("play_sound", identifier, sound, info);
+        public void PlaySound(string identifier, AudioStream sound, GDDictionary info) => Source.Call("play_sound", identifier, sound, info);
+
+        public void PlaySound(string identifier, AudioStream sound, Vector2? position = null, float? volumeDb = null, float? pitchScale = null, string bus = null)
+        {
+            var info = new GDDictionary();
+            if (position != null) info["position"] = position;
+            if (volumeDb != null) info["volume_db"] = volumeDb;
+            if (pitchScale != null) info["pitch_scale"] = pitchScale;
+            if (bus != null) info["bus"] = bus;
+            Source.Call("play_sound", identifier, sound, info);
+        }
 
         public bool EnsureCurrentTickInputComplete() => (bool)Source.Call("ensure_current_tick_input_complete");
 
-        public string OrderedDict2Str(Godot.Collections.Dictionary dict) => (string)Source.Call("ordered_dict2str");
+        public string OrderedDict2Str(GDDictionary dict) => (string)Source.Call("ordered_dict2str");
         #endregion
 
         #region Signal Events
@@ -343,7 +350,7 @@ namespace GodotRollbackNetcode
         public delegate void RollbackFlaggedDelegate(int tick);
         public event RollbackFlaggedDelegate RollbackFlagged;
 
-        public delegate void PredictionMissedDelegate(int tick, int peerId, Godot.Collections.Dictionary localInput, Godot.Collections.Dictionary remoteInput);
+        public delegate void PredictionMissedDelegate(int tick, int peerId, GDDictionary localInput, GDDictionary remoteInput);
         public event PredictionMissedDelegate PredictionMissed;
 
         public delegate void RemoteStateMismatchDelegate(int tick, int peerId, int localHash, int remoteHash);
@@ -370,7 +377,7 @@ namespace GodotRollbackNetcode
         public delegate void TickInputCompleteDelegate(int tick);
         public event TickInputCompleteDelegate TickInputComplete;
 
-        public delegate void SceneSpawnedDelegate(string name, Node spawnedNode, PackedScene scene, Godot.Collections.Dictionary data);
+        public delegate void SceneSpawnedDelegate(string name, Node spawnedNode, PackedScene scene, GDDictionary data);
         public event SceneSpawnedDelegate SceneSpawned;
 
         public delegate void SceneDespawnedDelegate(string name, Node node);
@@ -380,7 +387,7 @@ namespace GodotRollbackNetcode
         #endregion
 
         #region Signal Forwarding
-        private void ForwardSignalsToEvents()
+        protected override void ForwardSignalsToEvents()
         {
             Source.Connect("sync_started", this, nameof(OnSyncStarted));
             Source.Connect("sync_stopped", this, nameof(OnSyncStopped));
@@ -416,7 +423,7 @@ namespace GodotRollbackNetcode
             SceneDespawned?.Invoke(name, node);
         }
 
-        private void OnSceneSpawned(string name, Node spawnedNode, PackedScene scene, Godot.Collections.Dictionary data)
+        private void OnSceneSpawned(string name, Node spawnedNode, PackedScene scene, GDDictionary data)
         {
             SceneSpawned?.Invoke(name, spawnedNode, scene, data);
         }
@@ -461,7 +468,7 @@ namespace GodotRollbackNetcode
             RemoteStateMismatch?.Invoke(tick, peerId, localHash, remoteHash);
         }
 
-        private void OnPredictionMissed(int tick, int peerId, Godot.Collections.Dictionary localInput, Godot.Collections.Dictionary remoteInput)
+        private void OnPredictionMissed(int tick, int peerId, GDDictionary localInput, GDDictionary remoteInput)
         {
             PredictionMissed?.Invoke(tick, peerId, localInput, remoteInput);
         }

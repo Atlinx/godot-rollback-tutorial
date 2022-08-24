@@ -1,9 +1,10 @@
-﻿using Godot.Collections;
+﻿using Godot;
+using Godot.Collections;
 using System.Reflection;
 
 namespace Game
 {
-    public static class DictionaryUtils
+    public static class Utils
     {
         public static T Get<T>(this Dictionary dictionary, string key, T defaultReturn = default)
         {
@@ -20,6 +21,11 @@ namespace Game
                 dict[prop.Name] = prop.GetValue(obj, null);
             }
             return dict;
+        }
+
+        public static Vector2 Lerp(this Vector2 start, Vector2 end, float weight)
+        {
+            return new Vector2(Mathf.Lerp(start.x, end.x, weight), Mathf.Lerp(start.y, end.y, weight));
         }
     }
 }

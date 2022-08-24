@@ -11,35 +11,39 @@ namespace Game
         [Export]
         bool loggingEnabled = true;
 
-        Control connectionPanel;
+        Control mainMenu;
+        WindowDialog connectionPanel;
         LineEdit hostField;
         LineEdit portField;
         Label messageLabel;
         Label syncLostLabel;
-        Node serverPlayer;
-        Node clientPlayer;
+        CSharpPlayer serverPlayer;
+        CSharpPlayer clientPlayer;
         Button resetButton;
+        NetworkRandomNumberGenerator johnnyRng;
 
         public override void _Ready()
         {
-            connectionPanel = GetNode<Control>("CanvasLayer/ConnectionPanel");
-            hostField = GetNode<LineEdit>("CanvasLayer/ConnectionPanel/GridContainer/HostField");
-            portField = GetNode<LineEdit>("CanvasLayer/ConnectionPanel/GridContainer/PortField");
+            mainMenu = GetNode<Control>("CanvasLayer/MainMenu");
+            connectionPanel = GetNode<WindowDialog>("CanvasLayer/Online");
+            hostField = GetNode<LineEdit>("CanvasLayer/Online/GridContainer/HostField");
+            portField = GetNode<LineEdit>("CanvasLayer/Online/GridContainer/PortField");
             messageLabel = GetNode<Label>("CanvasLayer/MessageLabel");
             syncLostLabel = GetNode<Label>("CanvasLayer/SyncLostLabel");
             resetButton = GetNode<Button>("CanvasLayer/ResetButton");
-            serverPlayer = GetNode("ServerPlayer");
-            clientPlayer = GetNode("ClientPlayer");
+            serverPlayer = GetNode<CSharpPlayer>("ServerPlayer");
+            clientPlayer = GetNode<CSharpPlayer>("ClientPlayer");
+            johnnyRng = this.GetNodeAsWrapper<NetworkRandomNumberGenerator>("Johnny");
 
             GetTree().Connect("network_peer_connected", this, nameof(OnNetworkPeerConnected));
             GetTree().Connect("network_peer_disconnected", this, nameof(OnNetworkPeerDisconnected));
             GetTree().Connect("server_disconnected", this, nameof(OnServerDisconnected));
 
-            SyncManager.Instance.SyncStarted += OnSyncManagerSyncStarted;
-            SyncManager.Instance.SyncStopped += OnSyncManagerSyncStopped;
-            SyncManager.Instance.SyncLost += OnSyncManagerSyncLost;
-            SyncManager.Instance.SyncRegained += OnSyncManagerSyncRegained;
-            SyncManager.Instance.SyncError += OnSyncManagerSyncError;
+            SyncManager.Global.SyncStarted += OnSyncManagerSyncStarted;
+            SyncManager.Global.SyncStopped += OnSyncManagerSyncStopped;
+            SyncManager.Global.SyncLost += OnSyncManagerSyncLost;
+            SyncManager.Global.SyncRegained += OnSyncManagerSyncRegained;
+            SyncManager.Global.SyncError += OnSyncManagerSyncError;
 
             syncLostLabel.Visible = false;
         }
@@ -48,16 +52,17 @@ namespace Game
         {
             if (what == NotificationPredelete)
             {
-                SyncManager.Instance.SyncStarted -= OnSyncManagerSyncStarted;
-                SyncManager.Instance.SyncStopped -= OnSyncManagerSyncStopped;
-                SyncManager.Instance.SyncLost -= OnSyncManagerSyncLost;
-                SyncManager.Instance.SyncRegained -= OnSyncManagerSyncRegained;
-                SyncManager.Instance.SyncError -= OnSyncManagerSyncError;
+                SyncManager.Global.SyncStarted -= OnSyncManagerSyncStarted;
+                SyncManager.Global.SyncStopped -= OnSyncManagerSyncStopped;
+                SyncManager.Global.SyncLost -= OnSyncManagerSyncLost;
+                SyncManager.Global.SyncRegained -= OnSyncManagerSyncRegained;
+                SyncManager.Global.SyncError -= OnSyncManagerSyncError;
             }
         }
 
         private void OnServerButtonPressed()
         {
+            johnnyRng.Randomize();
             var peer = new NetworkedMultiplayerENet();
             if (!int.TryParse(portField.Text, out int port))
                 return;
@@ -65,6 +70,7 @@ namespace Game
             GetTree().NetworkPeer = peer;
             messageLabel.Text = "Listening...";
             connectionPanel.Visible = false;
+            mainMenu.Visible = false;
         }
 
         private void OnClientButtonPressed()
@@ -76,31 +82,44 @@ namespace Game
             GetTree().NetworkPeer = peer;
             messageLabel.Text = "Connecting...";
             connectionPanel.Visible = false;
+            mainMenu.Visible = false;
         }
 
         private async void OnNetworkPeerConnected(int peerId)
         {
             messageLabel.Text = "Connected with id: " + peerId;
-            SyncManager.Instance.AddPeer(peerId);
+            SyncManager.Global.AddPeer(peerId);
 
             serverPlayer.SetNetworkMaster(1);
-            if (GetTree().IsNetworkServer())
+            if (SyncManager.Global.NetworkAdaptor.IsNetworkHost())
                 clientPlayer.SetNetworkMaster(peerId);
             else
                 clientPlayer.SetNetworkMaster(GetTree().GetNetworkUniqueId());
 
-            if (GetTree().IsNetworkServer())
+            if (SyncManager.Global.NetworkAdaptor.IsNetworkHost())
             {
                 messageLabel.Text = "Starting...";
+                Rpc(nameof(SetupMatch), new
+                {
+                    motherSeed = johnnyRng.Seed
+                }.ToGodotDict());
                 await ToSignal(GetTree().CreateTimer(2.0f), "timeout");
-                SyncManager.Instance.Start();
+                SyncManager.Global.Start();
             }
+        }
+
+        [RemoteSync]
+        private void SetupMatch(Godot.Collections.Dictionary info)
+        {
+            johnnyRng.Seed = (int)info["motherSeed"];
+            clientPlayer.Seed(johnnyRng);
+            serverPlayer.Seed(johnnyRng);
         }
 
         private void OnNetworkPeerDisconnected(int peerId)
         {
             messageLabel.Text = "Disconnected with id: " + peerId;
-            SyncManager.Instance.RemovePeer(peerId);
+            SyncManager.Global.RemovePeer(peerId);
         }
 
         private void OnServerDisconnected()
@@ -110,8 +129,8 @@ namespace Game
 
         private void OnResetButtonPressed()
         {
-            SyncManager.Instance.Stop();
-            SyncManager.Instance.ClearPeers();
+            SyncManager.Global.Stop();
+            SyncManager.Global.ClearPeers();
             var peer = GetTree().NetworkPeer;
             if (peer is NetworkedMultiplayerENet enetPeer)
                 enetPeer.CloseConnection();
@@ -129,16 +148,16 @@ namespace Game
                     dir.MakeDir(LOG_FILE_DIRECTORY);
 
                 var datetime = OS.GetDatetime(true);
-                string logFileName = string.Format("{0}-{1}-{2}_{3}-{4}-{5}_peer-{6}.log", datetime["year"], datetime["month"], datetime["day"], datetime["hour"], datetime["minute"], datetime["second"], GetTree().GetNetworkUniqueId());
+                string logFileName = string.Format("{0}-{1}-{2}_{3}-{4}-{5}_peer-{6}.log", datetime["year"], datetime["month"], datetime["day"], datetime["hour"], datetime["minute"], datetime["second"], SyncManager.Global.NetworkAdaptor.GetNetworkUniqueId());
 
-                SyncManager.Instance.StartLogging(LOG_FILE_DIRECTORY + "/" + logFileName);
+                SyncManager.Global.StartLogging(LOG_FILE_DIRECTORY + "/" + logFileName);
             }
         }
 
         private void OnSyncManagerSyncStopped()
         {
             if (loggingEnabled)
-                SyncManager.Instance.StopLogging();
+                SyncManager.Global.StopLogging();
         }
 
         private void OnSyncManagerSyncLost()
@@ -159,13 +178,30 @@ namespace Game
             var peer = GetTree().NetworkPeer;
             if (peer is NetworkedMultiplayerENet enetPeer)
                 enetPeer.CloseConnection();
-            SyncManager.Instance.ClearPeers();
+            SyncManager.Global.ClearPeers();
         }
 
         public void SetupMatchForReplay(int myPeerId, Godot.Collections.Array peerIds, Godot.Collections.Dictionary matchInfo)
         {
             connectionPanel.Visible = false;
+            mainMenu.Visible = false;
             resetButton.Visible = false;
+        }
+
+        private void OnOnlineButtonPressed()
+        {
+            SyncManager.Global.ResetNetworkAdaptor();
+            connectionPanel.PopupCentered();
+        }
+
+        private void OnLocalButtonPressed()
+        {
+            var dummyNetworkAdaptor = GD.Load<GDScript>("res://addons/godot-rollback-netcode/DummyNetworkAdaptor.gd");
+            SyncManager.Global.NetworkAdaptor = new NetworkAdaptorWrapper((Godot.Object)dummyNetworkAdaptor.New());
+            SyncManager.Global.Start();
+            clientPlayer.inputPrefix = "player2_";
+
+            mainMenu.Visible = false;
         }
     }
 }

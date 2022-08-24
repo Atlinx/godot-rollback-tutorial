@@ -9,19 +9,22 @@ namespace Game
     {
         public static Node Spawn(Node parent, Vector2 position, Node owner)
         {
-            return SyncManager.Instance.Spawn(nameof(CSharpBomb), parent, GD.Load<PackedScene>("res://CSharp/CSharpBomb.tscn"), new { position, ownerPath = owner.GetPath().ToString() }.ToGodotDict());
+            return SyncManager.Global.Spawn(nameof(CSharpBomb), parent, GD.Load<PackedScene>("res://CSharp/CSharpBomb.tscn"), new { position, ownerPath = owner.GetPath().ToString() }.ToGodotDict());
         }
 
         public event Action Exploded;
         public NodePath BombOwnerPath { get; private set; }
 
         PackedScene explosionPrefab;
-        NetworkedTimer explosionTimer;
+        NetworkTimer explosionTimer;
+        NetworkAnimationPlayer animationPlayer;
 
         public override void _Ready()
         {
-            explosionTimer = this.GetNodeAsWrapper<NetworkedTimer>("ExplosionTimer");
+            explosionTimer = this.GetNodeAsWrapper<NetworkTimer>("ExplosionTimer");
             explosionTimer.Connect("timeout", this, nameof(OnExplosionTimerTimeout));
+
+            animationPlayer = this.GetNodeAsWrapper<NetworkAnimationPlayer>("NetworkAnimationPlayer");
 
             explosionPrefab = GD.Load<PackedScene>("res://CSharp/CSharpExplosion.tscn");
         }
@@ -37,17 +40,19 @@ namespace Game
             GlobalPosition = (Vector2)data["position"];
             BombOwnerPath = (string)data["ownerPath"];
             explosionTimer.Start();
+            animationPlayer.Play("Tick");
         }
 
         private void OnExplosionTimerTimeout()
         {
             Exploded?.Invoke();
-            SyncManager.Instance.Spawn("Explosion", GetParent(), explosionPrefab, new { position = GlobalPosition }.ToGodotDict());
-            SyncManager.Instance.Despawn(this);
+            SyncManager.Global.Spawn("Explosion", GetParent(), explosionPrefab, new { position = GlobalPosition }.ToGodotDict());
+            SyncManager.Global.Despawn(this);
         }
 
         public void _NetworkDespawn()
         {
+            animationPlayer.Stop(true);
             Exploded = null;
         }
     }

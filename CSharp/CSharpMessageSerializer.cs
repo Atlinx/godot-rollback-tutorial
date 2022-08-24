@@ -18,6 +18,7 @@ namespace Game
             NONE = 0,
             HAS_INPUT_VECTOR = 1,
             DROP_BOMB = 2,
+            TELEPORT = 4,
         }
 
         public CSharpMessageSerializer()
@@ -41,7 +42,8 @@ namespace Game
             buffer.Put32((int)allInput["$"]);
             buffer.PutU8(Convert.ToByte(allInput.Count - 1));
 
-            foreach (string path in allInput.Keys)
+            var sortedKeys = allInput.Keys.OfType<string>().OrderBy((key) => key);
+            foreach (string path in sortedKeys)
             {
                 if (path == "$")
                     continue;
@@ -54,6 +56,8 @@ namespace Game
                     header |= HeaderFlags.HAS_INPUT_VECTOR;
                 if (input.Contains("drop_bomb"))
                     header |= HeaderFlags.DROP_BOMB;
+                if (input.Contains("teleport"))
+                    header |= HeaderFlags.TELEPORT;
 
                 buffer.PutU8((byte)header);
 
@@ -92,6 +96,8 @@ namespace Game
                     input["input_vector"] = new Vector2(buffer.GetFloat(), buffer.GetFloat());
                 if (header.HasFlag(HeaderFlags.DROP_BOMB))
                     input["drop_bomb"] = true;
+                if (header.HasFlag(HeaderFlags.TELEPORT))
+                    input["teleport"] = true;
 
                 allInput[path] = input;
             }

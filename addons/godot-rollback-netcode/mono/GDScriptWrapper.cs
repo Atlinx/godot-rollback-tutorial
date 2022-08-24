@@ -9,6 +9,7 @@ namespace GodotRollbackNetcode
         public GDScriptWrapper(Godot.Object source)
         {
             Source = source;
+            ForwardSignalsToEvents();
         }
 
         /// <summary>
@@ -25,5 +26,6 @@ namespace GodotRollbackNetcode
             return Source.Connect(signal, target, method, binds, flags);
         }
 
+        protected virtual void ForwardSignalsToEvents() { }
     }
 }
