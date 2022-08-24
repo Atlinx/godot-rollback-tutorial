@@ -33,7 +33,7 @@ _global_script_class_icons={
 [application]
 
 config/name="godot-rollback-tutorial"
-run/main_scene="res://CSharp/CSharpMain.tscn"
+run/main_scene="res://GDScript/GDScriptMain.tscn"
 config/icon="res://icon.png"
 
 [autoload]
@@ -68,8 +68,10 @@ sync_debug={
 
 [network]
 
+limits/debugger_stdout/max_chars_per_second=2048000
 rollback/classes/message_serializer="res://CSharp/CSharpMessageSerializer.cs"
 rollback/debug/message_bytes=100
+rollback/debug/check_message_serializer_roundtrip=true
 rollback/log_inspector/replay_match_scene_path="res://CSharp/CSharpMain.tscn"
 
 [physics]

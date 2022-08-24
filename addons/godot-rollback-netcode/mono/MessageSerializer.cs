@@ -5,7 +5,7 @@ using System.Linq;
 
 namespace GodotRollbackNetcode
 {
-    public abstract class MessageSerializer : Godot.Object
+    public class MessageSerializer : Godot.Object
     {
         const int DEFAULT_MESSAGE_BUFFER_SIZE = 1280;
         enum InputMessageKey
@@ -37,13 +37,14 @@ namespace GodotRollbackNetcode
             var buffer = new StreamPeerBuffer();
             buffer.Resize(DEFAULT_MESSAGE_BUFFER_SIZE);
 
-            buffer.PutU32(Convert.ToUInt32(msg[(int)InputMessageKey.NEXT_INPUT_TICK_REQUESTED]));
+            buffer.Put32((int)msg[(int)InputMessageKey.NEXT_INPUT_TICK_REQUESTED]);
+
             Dictionary inputTicks = (Dictionary)msg[(int)InputMessageKey.INPUT];
             buffer.PutU8((byte)inputTicks.Count);
             if (inputTicks.Count > 0)
             {
                 var inputKeys = inputTicks.Keys.OfType<int>().OrderBy((key) => key);
-                buffer.PutU32(Convert.ToUInt32(inputKeys.First()));
+                buffer.Put32(inputKeys.First());
                 foreach (var inputKey in inputKeys)
                 {
                     var input = (byte[])inputTicks[inputKey];
@@ -52,14 +53,14 @@ namespace GodotRollbackNetcode
                 }
             }
 
-            buffer.PutU32(Convert.ToUInt32(msg[(int)InputMessageKey.NEXT_HASH_TICK_REQUESTED]));
+            buffer.Put32((int)msg[(int)InputMessageKey.NEXT_HASH_TICK_REQUESTED]);
 
             Dictionary stateHashes = (Dictionary)msg[(int)InputMessageKey.STATE_HASHES];
             buffer.PutU8(Convert.ToByte(stateHashes.Count));
             if (stateHashes.Count > 0)
             {
                 var stateHashKeys = stateHashes.Keys.OfType<int>().OrderBy((key) => key);
-                buffer.PutU32(Convert.ToUInt32(stateHashKeys.First()));
+                buffer.Put32(stateHashKeys.First());
                 foreach (var stateHashKey in stateHashKeys)
                     // HACK: Currently Godot marshalls all GDScript ints into C# ints, even though they
                     //       have widly different ranges. GDScript ints are 64-bit, while C# ints are
@@ -94,6 +95,7 @@ namespace GodotRollbackNetcode
                 {
                     var inputSize = buffer.GetU16();
                     ((Dictionary)msg[(int)InputMessageKey.INPUT])[inputTick] = buffer.GetData(inputSize)[1];
+                    inputTick += 1;
                 }
             }
 

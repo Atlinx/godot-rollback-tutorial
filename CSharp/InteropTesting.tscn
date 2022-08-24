@@ -1,0 +1,12 @@
+[gd_scene load_steps=3 format=2]
+
+[ext_resource path="res://CSharp/GDScriptInterop.gd" type="Script" id=1]
+[ext_resource path="res://CSharp/CSharpInterop.cs" type="Script" id=2]
+
+[node name="InteropTesting" type="Node2D"]
+
+[node name="CSharpInterop" type="Node2D" parent="."]
+script = ExtResource( 2 )
+
+[node name="GDScriptInterop" type="Node2D" parent="."]
+script = ExtResource( 1 )

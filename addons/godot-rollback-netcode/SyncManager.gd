@@ -1167,6 +1167,8 @@ func _physics_process(_delta: float) -> void:
 		_calculate_data_hash(local_input)
 		input_frame.players[network_adaptor.get_network_unique_id()] = InputForPlayer.new(local_input, false)
 		
+		print(local_input);
+		
 		# Only serialize and send input when we have real remote peers.
 		if peers.size() > 0:
 			var serialized_input: PoolByteArray = message_serializer.serialize_input(local_input)
@@ -1344,6 +1346,10 @@ func _on_received_input_tick(peer_id: int, serialized_msg: PoolByteArray) -> voi
 				continue
 			
 			var remote_input = message_serializer.unserialize_input(all_remote_input[remote_tick])
+			
+#			print("------ UNSERIALIZE REMOTE INPUT IN SYNC MANAGER: " + str(get_tree().get_network_unique_id()) + " --------")
+#			print(remote_input);
+			
 			var input_frame := _get_or_create_input_frame(remote_tick)
 			if input_frame == null:
 				# _get_or_create_input_frame() will have already flagged the error,
